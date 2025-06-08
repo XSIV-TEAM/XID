@@ -1,82 +1,94 @@
 #!/system/bin/sh
 
-userID=https://raw.githubusercontent.com/XSIV-TEAM/Clientes/refs/heads/main/Julia
+while true; do
+if ping -c 1 8.8.8.8 >/dev/null 2>&1; then break; fi
+done
+sleep 1
 
-APPS_GHOST=("com.valor.mfc.droid.tvapp.generic" "com.mm.droid.livetv.kids" "com.mm.droid.livetv.supertv" "com.mm.droid.livetv.btvapp" "com.mm.droid.livetv.duoprime" "com.mm.droid.livetv.redplaybox" "com.mm.droid.livetv.tve" "com.mm.droid.livetv.express" "com.digitizercommunity.loontv" "com.vod.droid.hot" "com.iptv.aovivo.aotv" "com.iptv.aovivo.aovod" "com.world.youcinetv" "com.newvod.app" "com.mm.droid.livetv" "com.simple.appstore.flymarket")
+MAC_BOOT=$(curl -s "https://raw.githubusercontent.com/XSIV-TEAM/XID/refs/heads/main/default")
 
-Link_MAC=/data/local/xmac
-ETH0_(){ ip link set eth0 down && ip link set eth0 address ${MAC_BOOT} && ip link set eth0 up; }
-cfg_adj(){ [ "$(getprop persist.sys.language)" != "pt" ] && setprop persist.sys.language "pt"; [ "$(getprop persist.sys.country)" != "BR" ] && setprop persist.sys.country "BR"; [ "$(getprop persist.sys.timezone)" != "America/Recife" ] && setprop persist.sys.timezone "America/Recife"; [ "$(getprop persist.sys.locale)" != "pt-BR" ] && setprop persist.sys.locale "pt-BR"; [ "$(settings get --user 0 global package_verifier_enable)" != "0" ] && settings put --user 0 global package_verifier_enable 0; [ "$(settings get --user 0 global auto_time_zone)" != "1" ] && settings put --user 0 global auto_time_zone 1; [ "$(settings get --user 0 global auto_time)" != "1" ] && settings put --user 0 global auto_time 1; [ "$(settings get --user 0 global force_msaa)" != "1" ] && settings put --user 0 global force_msaa 1; }
+VALIDATION=$(curl -s "https://raw.githubusercontent.com/XSIV-TEAM/Rxst/refs/heads/main/31000173")
+
+MY_APPS=( "com.valor.mfc.droid.tvapp.generic" "com.mm.droid.livetv.supertv" "com.mm.droid.livetv.btvapp" "com.mm.droid.livetv.duoprime" "com.mm.droid.livetv.redplaybox" "com.mm.droid.livetv.tve" "com.mm.droid.livetv.express" "com.iptv.stv.blive" "com.mm.droid.livetv.boto" "com.digitizercommunity.loontv" "com.vod.droid.hot" "com.iptv.aovivo.aotv" "com.iptv.aovivo.aovod" "com.world.youcinetv" "com.newvod.app" "com.mm.droid.livetv" "com.simple.appstore.flymarket" )
+
+default_mac(){ ip link set eth0 down && ip link set eth0 address ${MAC_BOOT} && ip link set eth0 up; }
+cfg_adj(){ setprop persist.sys.language "pt" && setprop persist.sys.country "BR" && setprop persist.sys.timezone "America/Recife" &&setprop persist.sys.locale "pt-BR" &&settings put global auto_time 1 &&settings put global auto_time_zone 1 && settings put global package_verifier_enable 0 && settings put --user 0 global auto_time 1 && settings put --user 0 global auto_time_zone 1 && settings put --user 0 global package_verifier_enable 0 & }
+vencimento(){ cfg_adj >/dev/null 2>&1
+AGUARDE_VLD=1
+CLIENTE=$(curl -s "https://raw.githubusercontent.com/XSIV-TEAM/Clientes/refs/heads/main/Jhon%20Lelo")
+AGORA=$(date "+%Y%m%d")
+if [[ ${AGORA} > ${CLIENTE} ]]; then
+VENCIDO=venceu
+[ -f ${CHKSYS} ] && rm -f ${CHKSYS}
+if [ ! -e ${OTT} ]; then
+su -c "echo '' > ${OTT}"
+for ghost in "${MY_APPS[@]}";do
+pm disable -n "$ghost" >/dev/null 2>&1
+done
+fi
+elif [[ ${AGORA} < ${CLIENTE} ]]; then
+VENCIDO=""
+if [ -f ${OTT} ]; then
+rm -f ${OTT}
+for ghost in "${MY_APPS[@]}";do
+pm enable -n "$ghost" >/dev/null 2>&1
+done
+su -c "echo '' > ${CHKSYS}"
+monitor_on >/dev/null 2>&1
+fi
+fi
+sleep 2400
+AGUARDE_VLD=
+}
+ferramentas(){ cfg_adj >/dev/null 2>&1
+AGUARDE_EPG=1
+Epg=/data/local/epg
+epg_m(){
+APPS_EPG=( "com.mm.droid.livetv.supertv" "com.mm.droid.livetv.btvapp" "com.mm.droid.livetv.duoprime" "com.mm.droid.livetv.redplaybox" "com.mm.droid.livetv.tve" "com.mm.droid.livetv.express" "com.mm.droid.livetv" )
+for epgx in "${APPS_EPG[@]}";do [ -f /data/data/${epgx} ] && rm -f /data/data/"$epgx"/databases/epgdata*; done
+su -c "echo '' > ${Epg}"
+}
+if [[ $(date '+%u') == 7 ]] && [ ! -e ${Epg} ]; then
+epg_m >/dev/null 2>&1
+elif [[ $(date '+%u') != 7 ]] && [ -f ${Epg} ]; then
+rm -f ${Epg}
+fi
+sleep 2400
+AGUARDE_EPG=
+}
+monitor_on(){ cfg_adj >/dev/null 2>&1
+VENCIDO=""
+MY_MAC=$( ifconfig eth0 | grep "HWaddr" | cut -d' ' -f10 )
+while true; do
+[[ ${VENCIDO} == venceu ]] && break
+if pm list packages | grep -i "${MFC}" >/dev/null 2>&1 && [ -z ${AGUARDE_MFC+x} ]; then AGUARDE_MFC=1; app_2; fi
+if ping -c 1 8.8.8.8 >/dev/null 2>&1; then
+	[[ ${MY_MAC} != ${MAC_BOOT} ]] && default_mac >/dev/null 2>&1
+	[ -z ${AGUARDE_EPG+x} ] && ferramentas &
+	[ -z ${AGUARDE_VLD+x} ] && vencimento >/dev/null 2>&1
+fi
+sleep 5
+done
+}
 MFC=com.valor.mfc.droid.tvapp.generic
 app_2(){
 rm -rf /data/data/${MFC}/pm/cache/*
-[ ! -e /data/data/${MFC}/shared_prefs ] && mkdir -p /data/data/${MFC}/shared_prefs;
-[ ! -e /data/data/${MFC}/shared_prefs/VALOR_MFC.xml ] && cp -rfp /system/etc/VALOR_MFC.xml "/data/data/$MFC/shared_prefs/";
-[ -d /data/media/0/mfc ] && rm -rf /data/media/0/mfc;
-[ ! -e /data/data/${MFC}/mfc ] && mkdir -p /data/data/${MFC}/mfc;
-[ $(su -c "ls -F /data/data/${MFC}/mfc" | grep -v '/$' | wc -l) -eq 0 ] && rm -rf /data/data/${MFC}/mfc/ota && echo "" > /data/data/${MFC}/mfc/ota;
-[ ! -e /data/media/0/Android/data/${MFC}/files ] && mkdir -p /data/media/0/Android/data/${MFC}/files;
-[ $(su -c "ls -F /data/media/0/Android/data/${MFC}/files" | grep -v '/$' | wc -l) -eq 0 ] && rm -rf /data/media/0/Android/data/${MFC}/files/ota && echo "" > /data/media/0/Android/data/${MFC}/files/ota;
+[ ! -d /data/data/${MFC}/shared_prefs ] && mkdir -p /data/data/${MFC}/shared_prefs && chown system:system /data/data/${MFC}/shared_prefs
+[ ! -f /data/data/${MFC}/shared_prefs/VALOR_MFC.xml ] && cp -rfp /system/etc/VALOR_MFC.xml "/data/data/$MFC/shared_prefs/" && chown system:system /data/data/${MFC}/shared_prefs/VALOR_MFC.xml
+[ -d /data/media/0/mfc ] && rm -rf /data/media/0/mfc
+[ ! -d /data/data/${MFC}/mfc ] && mkdir -p /data/data/${MFC}/mfc && chown system:system /data/data/${MFC}/mfc
+NU1=$(su -c "ls -F /data/data/${MFC}/mfc" | grep -v '/$' | wc -l)
+[ ${NU1} -eq 0 ] && rm -rf /data/data/${MFC}/mfc/ota && echo "" > /data/data/${MFC}/mfc/ota
+[ ! -e /data/media/0/Android/data/${MFC}/files ] && mkdir -p /data/media/0/Android/data/${MFC}/files
+NU2=$(su -c "ls -F /data/media/0/Android/data/${MFC}/files" | grep -v '/$' | wc -l)
+[ ${NU2} -eq 0 ] && rm -rf /data/media/0/Android/data/${MFC}/files/ota && echo "" > /data/media/0/Android/data/${MFC}/files/ota
 }
-vencimento(){
-
-while sleep 0.1; do
-if curl -s -o /dev/null -w '%{size_download}' http://google.com -gt 0; then
-break
-fi
-done
-cfg_adj
-
-if [ $(date "+%Y%m%d") -ge $(curl -s ${userID}) ]; then
-if [ ! -e ${OTT} ]; then
-for ghost in "${APPS_GHOST[@]}";do
-pm disable -n "$ghost" > /dev/null
-done
-rm -f ${Link_MAC}
-echo "" > ${OTT}
-fi; fi
-if [ $(curl -s ${userID}) -ge $(date "+%Y%m%d") ]; then
-if [ -f ${OTT} ]; then
-rm -f ${OTT}
-for ghost in "${APPS_GHOST[@]}";do
-pm enable -n "$ghost" > /dev/null
-done
-GO_
-fi; fi
-if pm list packages | grep -i "${MFC}" >/dev/null 2>&1 && [ -z ${AGUARDE_MFC+x} ]; then AGUARDE_MFC=1; app_2; fi
-vencimento
-}
-GO_(){
-BASE=$(curl -s "https://raw.githubusercontent.com/XSIV-TEAM/XID/refs/heads/main/default")
-MAC() {
-echo ${BASE}
-}
-MAC=`MAC`
-echo ${MAC} > ${Link_MAC}
-MAC_BOOT=$(cat "${Link_MAC}")
-if grep -qE '([0-9a-fA-F]{2}[:-]){5}([0-9a-fA-F]{2})' "${Link_MAC}"; then
-ETH0_
-vencimento
-else
-GO_
-fi
-}
-while sleep 0.1; do
-if curl -s -o /dev/null -w '%{size_download}' http://google.com -gt 0; then
-break
-fi
-done
+CHKSYS=/data/local/system
 OTT=/data/local/vencido
 if [ ! -e ${OTT} ]; then
-[ ! -e /data/media/0/.Rxst/31000173 ] && mkdir -p /data/media/0/.Rxst/31000173
-[ ! -e /data/media/0/.Rxst/31000173/31000173 ] && VALIDATION=$(curl -s "https://raw.githubusercontent.com/XSIV-TEAM/Rxst/refs/heads/main/31000173") && echo ${VALIDATION} > /data/media/0/.Rxst/31000173/31000173
-if [ ! -e "${Link_MAC}" ]; then
-GO_
-elif [ -f "${Link_MAC}" ]; then
-MAC_BOOT=$(cat "${Link_MAC}")
-ETH0_
-vencimento
-fi
+	[ ! -d /data/media/0/.Rxst/31000173 ] && mkdir -p /data/media/0/.Rxst/31000173
+	[ ! -f /data/media/0/.Rxst/31000173/31000173 ] && echo ${VALIDATION} > /data/media/0/.Rxst/31000173/31000173
+	[ ! -e ${CHKSYS} ] && echo '' > ${CHKSYS} && monitor_on >/dev/null 2>&1 || monitor_on >/dev/null 2>&1
 else
-vencimento
+	vencimento >/dev/null 2>&1
 fi
