@@ -1,94 +1,79 @@
-#!/system/bin/sh
-
-while true; do
-if ping -c 1 8.8.8.8 >/dev/null 2>&1; then break; fi
-done
-sleep 1
-
-MAC_BOOT=$(curl -s "https://raw.githubusercontent.com/XSIV-TEAM/XID/refs/heads/main/default")
-
-VALIDATION=$(curl -s "https://raw.githubusercontent.com/XSIV-TEAM/Rxst/refs/heads/main/31000173")
-
-MY_APPS=( "com.valor.mfc.droid.tvapp.generic" "com.mm.droid.livetv.supertv" "com.mm.droid.livetv.btvapp" "com.mm.droid.livetv.duoprime" "com.mm.droid.livetv.redplaybox" "com.mm.droid.livetv.tve" "com.mm.droid.livetv.express" "com.iptv.stv.blive" "com.mm.droid.livetv.boto" "com.digitizercommunity.loontv" "com.vod.droid.hot" "com.iptv.aovivo.aotv" "com.iptv.aovivo.aovod" "com.world.youcinetv" "com.newvod.app" "com.mm.droid.livetv" "com.simple.appstore.flymarket" )
-
-default_mac(){ ip link set eth0 down && ip link set eth0 address ${MAC_BOOT} && ip link set eth0 up; }
-cfg_adj(){ setprop persist.sys.language "pt" && setprop persist.sys.country "BR" && setprop persist.sys.timezone "America/Recife" &&setprop persist.sys.locale "pt-BR" &&settings put global auto_time 1 &&settings put global auto_time_zone 1 && settings put global package_verifier_enable 0 && settings put --user 0 global auto_time 1 && settings put --user 0 global auto_time_zone 1 && settings put --user 0 global package_verifier_enable 0 & }
-vencimento(){ cfg_adj >/dev/null 2>&1
-AGUARDE_VLD=1
-CLIENTE=$(curl -s "https://raw.githubusercontent.com/XSIV-TEAM/Clientes/refs/heads/main/Jhon%20Lelo")
-AGORA=$(date "+%Y%m%d")
-if [[ ${AGORA} > ${CLIENTE} ]]; then
-VENCIDO=venceu
-[ -f ${CHKSYS} ] && rm -f ${CHKSYS}
-if [ ! -e ${OTT} ]; then
-su -c "echo '' > ${OTT}"
-for ghost in "${MY_APPS[@]}";do
-pm disable -n "$ghost" >/dev/null 2>&1
-done
-fi
-elif [[ ${AGORA} < ${CLIENTE} ]]; then
-VENCIDO=""
-if [ -f ${OTT} ]; then
-rm -f ${OTT}
-for ghost in "${MY_APPS[@]}";do
-pm enable -n "$ghost" >/dev/null 2>&1
-done
-su -c "echo '' > ${CHKSYS}"
-monitor_on >/dev/null 2>&1
-fi
-fi
-sleep 2400
-AGUARDE_VLD=
-}
-ferramentas(){ cfg_adj >/dev/null 2>&1
-AGUARDE_EPG=1
-Epg=/data/local/epg
-epg_m(){
-APPS_EPG=( "com.mm.droid.livetv.supertv" "com.mm.droid.livetv.btvapp" "com.mm.droid.livetv.duoprime" "com.mm.droid.livetv.redplaybox" "com.mm.droid.livetv.tve" "com.mm.droid.livetv.express" "com.mm.droid.livetv" )
-for epgx in "${APPS_EPG[@]}";do [ -f /data/data/${epgx} ] && rm -f /data/data/"$epgx"/databases/epgdata*; done
-su -c "echo '' > ${Epg}"
-}
-if [[ $(date '+%u') == 7 ]] && [ ! -e ${Epg} ]; then
-epg_m >/dev/null 2>&1
-elif [[ $(date '+%u') != 7 ]] && [ -f ${Epg} ]; then
-rm -f ${Epg}
-fi
-sleep 2400
-AGUARDE_EPG=
-}
-monitor_on(){ cfg_adj >/dev/null 2>&1
-VENCIDO=""
-MY_MAC=$( ifconfig eth0 | grep "HWaddr" | cut -d' ' -f10 )
-while true; do
-[[ ${VENCIDO} == venceu ]] && break
-if pm list packages | grep -i "${MFC}" >/dev/null 2>&1 && [ -z ${AGUARDE_MFC+x} ]; then AGUARDE_MFC=1; app_2; fi
-if ping -c 1 8.8.8.8 >/dev/null 2>&1; then
-	[[ ${MY_MAC} != ${MAC_BOOT} ]] && default_mac >/dev/null 2>&1
-	[ -z ${AGUARDE_EPG+x} ] && ferramentas &
-	[ -z ${AGUARDE_VLD+x} ] && vencimento >/dev/null 2>&1
-fi
-sleep 5
-done
-}
-MFC=com.valor.mfc.droid.tvapp.generic
-app_2(){
-rm -rf /data/data/${MFC}/pm/cache/*
-[ ! -d /data/data/${MFC}/shared_prefs ] && mkdir -p /data/data/${MFC}/shared_prefs && chown system:system /data/data/${MFC}/shared_prefs
-[ ! -f /data/data/${MFC}/shared_prefs/VALOR_MFC.xml ] && cp -rfp /system/etc/VALOR_MFC.xml "/data/data/$MFC/shared_prefs/" && chown system:system /data/data/${MFC}/shared_prefs/VALOR_MFC.xml
-[ -d /data/media/0/mfc ] && rm -rf /data/media/0/mfc
-[ ! -d /data/data/${MFC}/mfc ] && mkdir -p /data/data/${MFC}/mfc && chown system:system /data/data/${MFC}/mfc
-NU1=$(su -c "ls -F /data/data/${MFC}/mfc" | grep -v '/$' | wc -l)
-[ ${NU1} -eq 0 ] && rm -rf /data/data/${MFC}/mfc/ota && echo "" > /data/data/${MFC}/mfc/ota
-[ ! -e /data/media/0/Android/data/${MFC}/files ] && mkdir -p /data/media/0/Android/data/${MFC}/files
-NU2=$(su -c "ls -F /data/media/0/Android/data/${MFC}/files" | grep -v '/$' | wc -l)
-[ ${NU2} -eq 0 ] && rm -rf /data/media/0/Android/data/${MFC}/files/ota && echo "" > /data/media/0/Android/data/${MFC}/files/ota
-}
-CHKSYS=/data/local/system
-OTT=/data/local/vencido
-if [ ! -e ${OTT} ]; then
-	[ ! -d /data/media/0/.Rxst/31000173 ] && mkdir -p /data/media/0/.Rxst/31000173
-	[ ! -f /data/media/0/.Rxst/31000173/31000173 ] && echo ${VALIDATION} > /data/media/0/.Rxst/31000173/31000173
-	[ ! -e ${CHKSYS} ] && echo '' > ${CHKSYS} && monitor_on >/dev/null 2>&1 || monitor_on >/dev/null 2>&1
-else
-	vencimento >/dev/null 2>&1
-fi
+IyEvc3lzdGVtL2Jpbi9zaAoKd2hpbGUgdHJ1ZTsgZG8KaWYgcGluZyAtYyAxIDguOC44LjggPi9k
+ZXYvbnVsbCAyPiYxOyB0aGVuIGJyZWFrOyBmaQpkb25lCnNsZWVwIDEKCk1BQ19CT09UPSQoY3Vy
+bCAtcyAiaHR0cHM6Ly9yYXcuZ2l0aHVidXNlcmNvbnRlbnQuY29tL1hTSVYtVEVBTS9YSUQvcmVm
+cy9oZWFkcy9tYWluL2RlZmF1bHQiKQoKVkFMSURBVElPTj0kKGN1cmwgLXMgImh0dHBzOi8vcmF3
+LmdpdGh1YnVzZXJjb250ZW50LmNvbS9YU0lWLVRFQU0vUnhzdC9yZWZzL2hlYWRzL21haW4vMzEw
+MDAxNzMiKQoKTVlfQVBQUz0oICJjb20udmFsb3IubWZjLmRyb2lkLnR2YXBwLmdlbmVyaWMiICJj
+b20ubW0uZHJvaWQubGl2ZXR2LnN1cGVydHYiICJjb20ubW0uZHJvaWQubGl2ZXR2LmJ0dmFwcCIg
+ImNvbS5tbS5kcm9pZC5saXZldHYuZHVvcHJpbWUiICJjb20ubW0uZHJvaWQubGl2ZXR2LnJlZHBs
+YXlib3giICJjb20ubW0uZHJvaWQubGl2ZXR2LnR2ZSIgImNvbS5tbS5kcm9pZC5saXZldHYuZXhw
+cmVzcyIgImNvbS5pcHR2LnN0di5ibGl2ZSIgImNvbS5tbS5kcm9pZC5saXZldHYuYm90byIgImNv
+bS5kaWdpdGl6ZXJjb21tdW5pdHkubG9vbnR2IiAiY29tLnZvZC5kcm9pZC5ob3QiICJjb20uaXB0
+di5hb3Zpdm8uYW90diIgImNvbS5pcHR2LmFvdml2by5hb3ZvZCIgImNvbS53b3JsZC55b3VjaW5l
+dHYiICJjb20ubmV3dm9kLmFwcCIgImNvbS5tbS5kcm9pZC5saXZldHYiICJjb20uc2ltcGxlLmFw
+cHN0b3JlLmZseW1hcmtldCIgKQoKZGVmYXVsdF9tYWMoKXsgaXAgbGluayBzZXQgZXRoMCBkb3du
+ICYmIGlwIGxpbmsgc2V0IGV0aDAgYWRkcmVzcyAke01BQ19CT09UfSAmJiBpcCBsaW5rIHNldCBl
+dGgwIHVwOyB9CmNmZ19hZGooKXsgc2V0cHJvcCBwZXJzaXN0LnN5cy5sYW5ndWFnZSAicHQiICYm
+IHNldHByb3AgcGVyc2lzdC5zeXMuY291bnRyeSAiQlIiICYmIHNldHByb3AgcGVyc2lzdC5zeXMu
+dGltZXpvbmUgIkFtZXJpY2EvUmVjaWZlIiAmJnNldHByb3AgcGVyc2lzdC5zeXMubG9jYWxlICJw
+dC1CUiIgJiZzZXR0aW5ncyBwdXQgZ2xvYmFsIGF1dG9fdGltZSAxICYmc2V0dGluZ3MgcHV0IGds
+b2JhbCBhdXRvX3RpbWVfem9uZSAxICYmIHNldHRpbmdzIHB1dCBnbG9iYWwgcGFja2FnZV92ZXJp
+Zmllcl9lbmFibGUgMCAmJiBzZXR0aW5ncyBwdXQgLS11c2VyIDAgZ2xvYmFsIGF1dG9fdGltZSAx
+ICYmIHNldHRpbmdzIHB1dCAtLXVzZXIgMCBnbG9iYWwgYXV0b190aW1lX3pvbmUgMSAmJiBzZXR0
+aW5ncyBwdXQgLS11c2VyIDAgZ2xvYmFsIHBhY2thZ2VfdmVyaWZpZXJfZW5hYmxlIDAgJiB9CnZl
+bmNpbWVudG8oKXsgY2ZnX2FkaiA+L2Rldi9udWxsIDI+JjEKQUdVQVJERV9WTEQ9MQpDTElFTlRF
+PSQoY3VybCAtcyAiaHR0cHM6Ly9yYXcuZ2l0aHVidXNlcmNvbnRlbnQuY29tL1hTSVYtVEVBTS9D
+bGllbnRlcy9yZWZzL2hlYWRzL21haW4vSmhvbiUyMExlbG8iKQpBR09SQT0kKGRhdGUgIislWSVt
+JWQiKQppZiBbWyAke0FHT1JBfSA+ICR7Q0xJRU5URX0gXV07IHRoZW4KVkVOQ0lETz12ZW5jZXUK
+WyAtZiAke0NIS1NZU30gXSAmJiBybSAtZiAke0NIS1NZU30KaWYgWyAhIC1lICR7T1RUfSBdOyB0
+aGVuCnN1IC1jICJlY2hvICcnID4gJHtPVFR9Igpmb3IgZ2hvc3QgaW4gIiR7TVlfQVBQU1tAXX0i
+O2RvCnBtIGRpc2FibGUgLW4gIiRnaG9zdCIgPi9kZXYvbnVsbCAyPiYxCmRvbmUKZmkKZWxpZiBb
+WyAke0FHT1JBfSA8ICR7Q0xJRU5URX0gXV07IHRoZW4KVkVOQ0lETz0iIgppZiBbIC1mICR7T1RU
+fSBdOyB0aGVuCnJtIC1mICR7T1RUfQpmb3IgZ2hvc3QgaW4gIiR7TVlfQVBQU1tAXX0iO2RvCnBt
+IGVuYWJsZSAtbiAiJGdob3N0IiA+L2Rldi9udWxsIDI+JjEKZG9uZQpzdSAtYyAiZWNobyAnJyA+
+ICR7Q0hLU1lTfSIKbW9uaXRvcl9vbiA+L2Rldi9udWxsIDI+JjEKZmkKZmkKc2xlZXAgMjQwMApB
+R1VBUkRFX1ZMRD0KfQpmZXJyYW1lbnRhcygpeyBjZmdfYWRqID4vZGV2L251bGwgMj4mMQpBR1VB
+UkRFX0VQRz0xCkVwZz0vZGF0YS9sb2NhbC9lcGcKZXBnX20oKXsKQVBQU19FUEc9KCAiY29tLm1t
+LmRyb2lkLmxpdmV0di5zdXBlcnR2IiAiY29tLm1tLmRyb2lkLmxpdmV0di5idHZhcHAiICJjb20u
+bW0uZHJvaWQubGl2ZXR2LmR1b3ByaW1lIiAiY29tLm1tLmRyb2lkLmxpdmV0di5yZWRwbGF5Ym94
+IiAiY29tLm1tLmRyb2lkLmxpdmV0di50dmUiICJjb20ubW0uZHJvaWQubGl2ZXR2LmV4cHJlc3Mi
+ICJjb20ubW0uZHJvaWQubGl2ZXR2IiApCmZvciBlcGd4IGluICIke0FQUFNfRVBHW0BdfSI7ZG8g
+WyAtZiAvZGF0YS9kYXRhLyR7ZXBneH0gXSAmJiBybSAtZiAvZGF0YS9kYXRhLyIkZXBneCIvZGF0
+YWJhc2VzL2VwZ2RhdGEqOyBkb25lCnN1IC1jICJlY2hvICcnID4gJHtFcGd9Igp9CmlmIFtbICQo
+ZGF0ZSAnKyV1JykgPT0gNyBdXSAmJiBbICEgLWUgJHtFcGd9IF07IHRoZW4KZXBnX20gPi9kZXYv
+bnVsbCAyPiYxCmVsaWYgW1sgJChkYXRlICcrJXUnKSAhPSA3IF1dICYmIFsgLWYgJHtFcGd9IF07
+IHRoZW4Kcm0gLWYgJHtFcGd9CmZpCnNsZWVwIDI0MDAKQUdVQVJERV9FUEc9Cn0KbW9uaXRvcl9v
+bigpeyBjZmdfYWRqID4vZGV2L251bGwgMj4mMQpWRU5DSURPPSIiCk1ZX01BQz0kKCBpZmNvbmZp
+ZyBldGgwIHwgZ3JlcCAiSFdhZGRyIiB8IGN1dCAtZCcgJyAtZjEwICkKd2hpbGUgdHJ1ZTsgZG8K
+W1sgJHtWRU5DSURPfSA9PSB2ZW5jZXUgXV0gJiYgYnJlYWsKaWYgcG0gbGlzdCBwYWNrYWdlcyB8
+IGdyZXAgLWkgIiR7TUZDfSIgPi9kZXYvbnVsbCAyPiYxICYmIFsgLXogJHtBR1VBUkRFX01GQyt4
+fSBdOyB0aGVuIEFHVUFSREVfTUZDPTE7IGFwcF8yOyBmaQppZiBwaW5nIC1jIDEgOC44LjguOCA+
+L2Rldi9udWxsIDI+JjE7IHRoZW4KCVtbICR7TVlfTUFDfSAhPSAke01BQ19CT09UfSBdXSAmJiBk
+ZWZhdWx0X21hYyA+L2Rldi9udWxsIDI+JjEKCVsgLXogJHtBR1VBUkRFX0VQRyt4fSBdICYmIGZl
+cnJhbWVudGFzICYKCVsgLXogJHtBR1VBUkRFX1ZMRCt4fSBdICYmIHZlbmNpbWVudG8gPi9kZXYv
+bnVsbCAyPiYxCmZpCnNsZWVwIDUKZG9uZQp9Ck1GQz1jb20udmFsb3IubWZjLmRyb2lkLnR2YXBw
+LmdlbmVyaWMKYXBwXzIoKXsKcm0gLXJmIC9kYXRhL2RhdGEvJHtNRkN9L3BtL2NhY2hlLyoKWyAh
+IC1kIC9kYXRhL2RhdGEvJHtNRkN9L3NoYXJlZF9wcmVmcyBdICYmIG1rZGlyIC1wIC9kYXRhL2Rh
+dGEvJHtNRkN9L3NoYXJlZF9wcmVmcyAmJiBjaG93biBzeXN0ZW06c3lzdGVtIC9kYXRhL2RhdGEv
+JHtNRkN9L3NoYXJlZF9wcmVmcwpbICEgLWYgL2RhdGEvZGF0YS8ke01GQ30vc2hhcmVkX3ByZWZz
+L1ZBTE9SX01GQy54bWwgXSAmJiBjcCAtcmZwIC9zeXN0ZW0vZXRjL1ZBTE9SX01GQy54bWwgIi9k
+YXRhL2RhdGEvJE1GQy9zaGFyZWRfcHJlZnMvIiAmJiBjaG93biBzeXN0ZW06c3lzdGVtIC9kYXRh
+L2RhdGEvJHtNRkN9L3NoYXJlZF9wcmVmcy9WQUxPUl9NRkMueG1sClsgLWQgL2RhdGEvbWVkaWEv
+MC9tZmMgXSAmJiBybSAtcmYgL2RhdGEvbWVkaWEvMC9tZmMKWyAhIC1kIC9kYXRhL2RhdGEvJHtN
+RkN9L21mYyBdICYmIG1rZGlyIC1wIC9kYXRhL2RhdGEvJHtNRkN9L21mYyAmJiBjaG93biBzeXN0
+ZW06c3lzdGVtIC9kYXRhL2RhdGEvJHtNRkN9L21mYwpOVTE9JChzdSAtYyAibHMgLUYgL2RhdGEv
+ZGF0YS8ke01GQ30vbWZjIiB8IGdyZXAgLXYgJy8kJyB8IHdjIC1sKQpbICR7TlUxfSAtZXEgMCBd
+ICYmIHJtIC1yZiAvZGF0YS9kYXRhLyR7TUZDfS9tZmMvb3RhICYmIGVjaG8gIiIgPiAvZGF0YS9k
+YXRhLyR7TUZDfS9tZmMvb3RhClsgISAtZSAvZGF0YS9tZWRpYS8wL0FuZHJvaWQvZGF0YS8ke01G
+Q30vZmlsZXMgXSAmJiBta2RpciAtcCAvZGF0YS9tZWRpYS8wL0FuZHJvaWQvZGF0YS8ke01GQ30v
+ZmlsZXMKTlUyPSQoc3UgLWMgImxzIC1GIC9kYXRhL21lZGlhLzAvQW5kcm9pZC9kYXRhLyR7TUZD
+fS9maWxlcyIgfCBncmVwIC12ICcvJCcgfCB3YyAtbCkKWyAke05VMn0gLWVxIDAgXSAmJiBybSAt
+cmYgL2RhdGEvbWVkaWEvMC9BbmRyb2lkL2RhdGEvJHtNRkN9L2ZpbGVzL290YSAmJiBlY2hvICIi
+ID4gL2RhdGEvbWVkaWEvMC9BbmRyb2lkL2RhdGEvJHtNRkN9L2ZpbGVzL290YQp9CkNIS1NZUz0v
+ZGF0YS9sb2NhbC9zeXN0ZW0KT1RUPS9kYXRhL2xvY2FsL3ZlbmNpZG8KaWYgWyAhIC1lICR7T1RU
+fSBdOyB0aGVuCglbICEgLWQgL2RhdGEvbWVkaWEvMC8uUnhzdC8zMTAwMDE3MyBdICYmIG1rZGly
+IC1wIC9kYXRhL21lZGlhLzAvLlJ4c3QvMzEwMDAxNzMKCVsgISAtZiAvZGF0YS9tZWRpYS8wLy5S
+eHN0LzMxMDAwMTczLzMxMDAwMTczIF0gJiYgZWNobyAke1ZBTElEQVRJT059ID4gL2RhdGEvbWVk
+aWEvMC8uUnhzdC8zMTAwMDE3My8zMTAwMDE3MwoJWyAhIC1lICR7Q0hLU1lTfSBdICYmIGVjaG8g
+JycgPiAke0NIS1NZU30gJiYgbW9uaXRvcl9vbiA+L2Rldi9udWxsIDI+JjEgfHwgbW9uaXRvcl9v
+biA+L2Rldi9udWxsIDI+JjEKZWxzZQoJdmVuY2ltZW50byA+L2Rldi9udWxsIDI+JjEKZmkK
